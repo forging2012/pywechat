@@ -37,7 +37,7 @@ kd_code = {"申通":"shentong","EMS":"ems","顺丰":"shunfeng",
 	"天天":"tiantian","汇通":"huitongkuaidi","全峰":"quanfengkuaidi",
 	"德邦":"debangwuliu","宅急送":"zhaijisong"}
 
-def TextGet(PostXml):
+def RequestTextGet(PostXml):
 
 
 
@@ -71,10 +71,12 @@ class TextHandler(Handler):
     def fy(KeyFrom,Key,Word):
         Qword = urllib2.quote(word.encode("utf8"))
         
-        ReqURL = u'http://fanyi.youdao.com/openapi.do?keyfrom=%s&key=%s&type=data&doctype=json&version=1.1&q=%s'
-        ReqURL = ReqURL % (KeyFrom,Key,Qword)
+        PayLoad = {"key":Key,"keyfrom":KeyFrom,"q"=Word}
+        # ReqURL = u'http://fanyi.youdao.com/openapi.do?keyfrom=%s&key=%s&type=data&doctype=json&version=1.1&q=%s'
+        ReqURL = u'http://fanyi.youdao.com/openapi.do?type=data&doctype=json&version=1.1'
+        #ReqURL = ReqURL % (KeyFrom,Key,Qword)
         
-        YoudaoRet = requests.get(ReqURL)
+        YoudaoRet = requests.get(ReqURL,params=PayLoad)
         RetJSON = Ret.json()
 
         
@@ -104,9 +106,10 @@ class TextHandler(Handler):
         return html
 
 
-    def tq(city):
-        city = city.strip()
-        url = 'http://apis.baidu.com/heweather/weather/free?city=' + city
+    def tq(ApiKey,City):
+        url = 'http://apis.baidu.com/heweather/weather/free'
+
+        PayLoad = {}
         req = urllib2.Request(url)
 
         req.add_header("apikey", "47885eaa7687f444901013c25f4b7745")
@@ -124,44 +127,41 @@ class TextHandler(Handler):
         return ret
 
 
-    def kd(name):
-        cpy_name = name.split()[0]
-        cpy_name = kd_name[cpy_name]
-        nums = name.split()[1]
-        url = "http://www.kuaidi100.com/query?type=%s&postid=%s" % (cpy_name,nums)
-        #print url
-        content = urllib2.urlopen(url).read()
-        ret = ""
-        if(content):
-            # print content
-            ret = json.loads(content)
-            if ret["message"] == "ok":
-                ret = ret["data"]
-            else:
-                ret = ret["message"]
+    def kd(CpyName,PostID):
+        CpyName = kd_name[CpyName]
+        PayLoad = {"type":CpyName,"postid":PostID}
+        #url = "http://www.kuaidi100.com/query?type=%s&postid=%s" % (cpy_name,nums)
+        ReqURL = "http://www.kuaidi100.com/query"
+
+        KDRet = requests.get(ReqURL,params=PayLoad)
+        RetJSON = KDRet.json()
+
+
+        if RetJSON["message"] == "ok":
+            Data = RetJSON["data"]
+            Ret = "\n".join([x for i in retjson["data"] for x in i.values()])
         else:
-            ret = "查询失败"
+            Ret = ret["message"]
+            Ret = "查询失败"
 
-        return ret
+        return Ret
 
 
-    def bk(name):
-        name = name.strip()
-        name = urllib2.quote(name.encode("utf8"))
-        url = "http://baike.baidu.com/api/openapi/BaikeLemmaCardApi?scope=103&format=json&appid=379020&bk_key=%s&bk_length=600" % name
+    def bk(Word):
+        Word = urllib2.quote(Word.encode("utf8"))
+        Payload = {"bk_key":Word}
+        ReqURL= "http://baike.baidu.com/api/openapi/BaikeLemmaCardApi?format=json&appid=379020"
         
-        resp = urllib2.urlopen(url)
-        content = resp.read()
-        content = json.loads(content)
+        BKRet = requests.get(ReqURL,params=PayLoad)
+        RetJSON = BKRet.json()
 
-        if len(content) != 0:
-            desc = content["desc"]
+        if len(RetJSON) != 0:
+            Desc = RetJSON["desc"]
             # print desc
-            abstract = content["abstract"]
+            Abstract = RetJSON["abstract"]
             # print abstract
-            ret = desc + "\na" + abstract
+            Ret = Desc + "\n" + Abstract
         else:        
-            ret = "该词条暂未收录"
+            Ret = "该词条暂未收录"
             
-        return ret     
-
+        return ret
