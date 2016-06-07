@@ -5,6 +5,7 @@ import json
 import sys 
 import string
 import requests
+import re
 
 reload(sys) 
 sys.setdefaultencoding('utf8')
@@ -17,22 +18,35 @@ ___metatype__ = type
 
 Menu = """
 help(帮助菜单):help，？，帮助
+fy(翻译):fy 内容,如:fy 你好
+tq(天气):tq 地名，如:tq 上海
+xh(笑话):xh
+gq(歌曲): gq 歌曲名
+rb(每周日报):日报  获取每天日报
+kd(快递):kd 快递公司 内容，如:kd 韵达 快递单号
+bk(百度百科):bk 内容，如:bk 中国
+bd(百度):bk 内容，如:bd 中国
+"""
+
+Menu2 = """
+help(帮助菜单):help，？，帮助
 fy(翻译):fy  “内容”
 ss(搜索):ss “书籍” 
 jqr(机器人)！！！可能
 tq(天气):天气  地名
 xh(笑话):xh
-gp(股票，最新价格):gp  10020(股票代码)
+gp(股票，预测):gp  10020(股票代码)
 gq(歌曲): gq 歌曲名
 bt(bt搜索): bt 名字
 dy(电影搜索): dy 电影名(正版视频网站或非正版，隐藏功能)
 rb(每周日报):日报  获取每天日报
 kd(快递):kd 快递公司 内容，如:kd 韵达 快递单号
 bk(百度百科):bk 内容，如:bk 中国
+bd(百度):bk 内容，如:bd 中国
 ----现在暂时只支持fy,tq,kd,bk----
 """
 
-kd_code = {"申通":"shentong","EMS":"ems","顺丰":"shunfeng",
+KDCode = {"申通":"shentong","EMS":"ems","顺丰":"shunfeng",
 	"圆通":"yuantong","中通":"zhongtong","韵达":"yunda",
 	"天天":"tiantian","汇通":"huitongkuaidi","全峰":"quanfengkuaidi",
 	"德邦":"debangwuliu","宅急送":"zhaijisong"}
@@ -47,10 +61,15 @@ def RequestTextGet(PostXml):
     ToUser = PostXML.find("ToUserName").text
     FromUser = PostXML.find("FromUserName").text
     UserContent  = PostXML.find("Content").text
+    UserContent = UserContent.split()
 
     "错误处理"
 
     return ToUser,FromUser,UserContent
+
+def ConfigGet(name):
+    pass
+
 
 class Handler():
     """
@@ -62,32 +81,32 @@ class Handler():
     #def callback(self,Action,*args):
     #    Func = getattr(self,Action,None)
     #    if callable(func):return Func(*args)
+    def __init__(self,Ret=None):
+        self.Ret = Ret
 
-    def Get(self,Action):
+    def Get(self,Action,*args):
         Func = getattr(self,Action,None)
-        if callable(func):return Func(*args)
+        if callable(Func):self.Ret = Func(*args)
+    def help(slef):
+        return Menu
+
 
 class TextHandler(Handler):
-    def fy(KeyFrom,Key,Word):
-        Qword = urllib2.quote(word.encode("utf8"))
-        
-        PayLoad = {"key":Key,"keyfrom":KeyFrom,"q"=Word}
-        # ReqURL = u'http://fanyi.youdao.com/openapi.do?keyfrom=%s&key=%s&type=data&doctype=json&version=1.1&q=%s'
+    def fy(self,Word,KeyFrom="youerning",Key="16283712"):
+        Payload = {"key":Key,"keyfrom":KeyFrom,"q":Word}
         ReqURL = u'http://fanyi.youdao.com/openapi.do?type=data&doctype=json&version=1.1'
-        #ReqURL = ReqURL % (KeyFrom,Key,Qword)
-        
-        YoudaoRet = requests.get(ReqURL,params=PayLoad)
-        RetJSON = Ret.json()
+        YoudaoRet = requests.get(ReqURL,params=Payload)
+        RetJSON = YoudaoRet.json()
 
         
         if RetJSON["errorCode"] == 0:
             Trans = RetJSON["translation"]
             Trans = "\n".join(Trans)
             
-            if "basic" in ret_fy.keys():
-                Explains = ret_fy["basic"]["explains"]
-                Explains = "\n".join(other_trans)
-                OtherTrans = u"\n\n其他释义有:\n" + other_trans
+            if "basic" in RetJSON.keys():
+                OtherTrans = RetJSON["basic"]["explains"]
+                OtherTrans = "\n".join(OtherTrans)
+                OtherTrans = u"\n\n其他释义有:\n" + OtherTrans
 
             else:
                 OtherTrans = ""
@@ -98,61 +117,62 @@ class TextHandler(Handler):
         else:
             return "查询内容有问题"
 
+    def bd(self,Word):
+        Word = urllib2.quote(Word.encode("utf8"))
+        ReqURL = "http://www.baidu.com/s?wd=" + Word
 
-    def baidu_search(keyword):
-        p= {'wd': keyword}
-        res=urllib2.urlopen("http://www.baidu.com/s?"+urllib.urlencode(p))
-        html=res.read()
-        return html
+        return ReqURL
 
 
-    def tq(ApiKey,City):
-        url = 'http://apis.baidu.com/heweather/weather/free'
+    def tq(self,City,ApiKey="47885eaa7687f444901013c25f4b7745"):
+        ReqURL = 'http://apis.baidu.com/heweather/weather/free'
+        Payload = {"city":City}
 
-        PayLoad = {}
-        req = urllib2.Request(url)
+        header = {"apikey":ApiKey}
+        
+        TQRet = requests.post(ReqURL,data=Payload,headers=header)
+        RetJSON = TQRet.json()
 
-        req.add_header("apikey", "47885eaa7687f444901013c25f4b7745")
+        if RetJSON["HeWeather data service 3.0"][0]["status"] == "ok":
+            RetCond =  RetJSON["HeWeather data service 3.0"][0]["now"]["cond"]["txt"]
+            RetBrf = RetJSON["HeWeather data service 3.0"][0]["suggestion"]["comf"]["brf"] 
+            RetBrfTXT = RetJSON["HeWeather data service 3.0"][0]["suggestion"]["comf"]["txt"]
 
-        resp = urllib2.urlopen(req)
-        content = resp.read()
-        if(content):
-            ret = json.loads(content)
-            # ret = ret["HeWeather data service 3.0"]
-            ret =  ret["HeWeather data service 3.0"][0]["now"]["cond"]["txt"]
+            Ret = "\n".join([RetCond,RetBrf,RetBrfTXT])
                 
         else:
-            ret = "查询失败"
-
-        return ret
-
-
-    def kd(CpyName,PostID):
-        CpyName = kd_name[CpyName]
-        PayLoad = {"type":CpyName,"postid":PostID}
-        #url = "http://www.kuaidi100.com/query?type=%s&postid=%s" % (cpy_name,nums)
-        ReqURL = "http://www.kuaidi100.com/query"
-
-        KDRet = requests.get(ReqURL,params=PayLoad)
-        RetJSON = KDRet.json()
-
-
-        if RetJSON["message"] == "ok":
-            Data = RetJSON["data"]
-            Ret = "\n".join([x for i in retjson["data"] for x in i.values()])
-        else:
-            Ret = ret["message"]
             Ret = "查询失败"
 
         return Ret
 
 
-    def bk(Word):
-        Word = urllib2.quote(Word.encode("utf8"))
+    def kd(self,CpyName,PostID):
+        CpyName = KDCode[CpyName]
+        print CpyName,PostID
+        Payload = {"type":CpyName,"postid":PostID}
+        #url = "http://www.kuaidi100.com/query?type=%s&postid=%s" % (cpy_name,nums)
+        ReqURL = "http://www.kuaidi100.com/query"
+
+        KDRet = requests.get(ReqURL,params=Payload)
+        print KDRet.url
+        RetJSON = KDRet.json()
+
+
+        if RetJSON["message"] == "ok":
+            Data = RetJSON["data"]
+            Ret = "\n".join([x for i in RetJSON["data"] for x in i.values()])
+        else:
+            #Ret = Ret["message"]
+            Ret = "查询失败"
+
+        return Ret
+
+
+    def bk(self,Word):
         Payload = {"bk_key":Word}
         ReqURL= "http://baike.baidu.com/api/openapi/BaikeLemmaCardApi?format=json&appid=379020"
-        
-        BKRet = requests.get(ReqURL,params=PayLoad)
+        BKRet = requests.get(ReqURL,params=Payload)
+        print BKRet.url
         RetJSON = BKRet.json()
 
         if len(RetJSON) != 0:
@@ -164,4 +184,8 @@ class TextHandler(Handler):
         else:        
             Ret = "该词条暂未收录"
             
-        return ret
+        return Ret
+   def xh(self):
+       XHResp = requests.get("http://www.qiushibaike.com/text/")
+       XHRet = re.findall(r"""<div class="content">(\s*.*\s*)</div>""",XHResp)
+
