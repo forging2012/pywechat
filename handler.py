@@ -18,7 +18,17 @@ sys.setdefaultencoding('utf8')
 ___metatype__ = type
 
 
+
 """ handle the user content """
+
+
+#config file read###
+Conf= ConfigParser.ConfigParser()
+Conf.readfp(open("apikey.ini"))
+YoudaoKey = Conf.get("datasource","YoudaoKey")
+YoudaoKeyFrom = Conf.get("datasource","YoudaoKeyFrom")
+BaiduAPI = Conf.get("datasource","BaiduAPI")
+
 
 Menu = """
 帮助菜单:输入任意字符
@@ -120,7 +130,7 @@ class Handler():
 
 class TextHandler(Handler):
     @ArgsConfig(1)
-    def fy(self,Word,KeyFrom="youerning",Key="16283712"):
+    def fy(self,Word,KeyFrom=YoudaoKeyFrom,Key=YoudaoKey):
         Payload = {"key":Key,"keyfrom":KeyFrom,"q":Word}
         ReqURL = u'http://fanyi.youdao.com/openapi.do?type=data&doctype=json&version=1.1'
         YoudaoRet = requests.get(ReqURL,params=Payload)
@@ -154,7 +164,7 @@ class TextHandler(Handler):
 
 
     @ArgsConfig(1)
-    def tq(self,City,ApiKey="47885eaa7687f444901013c25f4b7745"):
+    def tq(self,City,ApiKey=BaiduAPI):
         ReqURL = 'http://apis.baidu.com/heweather/weather/free'
         Payload = {"city":City}
 
