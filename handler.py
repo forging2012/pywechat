@@ -18,7 +18,6 @@ sys.setdefaultencoding('utf8')
 ___metatype__ = type
 
 
-
 """ handle the user content """
 
 
