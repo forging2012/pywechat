@@ -1,3 +1,4 @@
+#coding: utf-8
 import time
 
 """for Get and Respsonse the wechat's Server posted XML"""
